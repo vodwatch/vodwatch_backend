@@ -26,8 +26,8 @@ def read_root():
 
 @app.post("/eventInfo/")
 def write_event_info(event_info: EventInfo):
-    print("event type: " + event_info.event)
-    print("current time: " + event_info.currentTime)
+    print(event_info.event)
+    print(event_info.currentTime)
     return event_info
 
 
