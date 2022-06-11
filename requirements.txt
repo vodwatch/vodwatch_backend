@@ -1,2 +1,2 @@
-fastapi==0.75.2
-uvicorn[standard]==0.17.6
+python-socketio
+eventlet
