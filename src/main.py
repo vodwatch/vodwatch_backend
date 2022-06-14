@@ -1,5 +1,6 @@
 import eventlet
 import socketio
+from enum import Enum
 
 sio = socketio.Server(cors_allowed_origins='*')
 app = socketio.WSGIApp(sio)
@@ -8,9 +9,14 @@ app = socketio.WSGIApp(sio)
 def connect(sid, environ):
     print('connect ', sid)
 
-@sio.on('event')
-def event(sid, data):
+@sio.event
+def message(sid, data):
     print(sid, data)
+    pass
+
+@sio.event
+def video_event(sid, data):
+    print(data)
     pass
 
 @sio.event
