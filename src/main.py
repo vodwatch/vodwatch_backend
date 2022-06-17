@@ -7,6 +7,7 @@ app = socketio.WSGIApp(sio)
 @sio.event
 def connect(sid, environ):
     print('connect ', sid)
+    sio.enter_room(sid, 'room')
     return "OK"
 
 @sio.event
@@ -16,8 +17,8 @@ def message(sid, data):
 
 @sio.event
 def send_video_event(sid, data):
-    print(data)
-    sio.emit(event="receive_video_event", data=data)
+    print(sid, data)
+    sio.emit(event="receive_video_event", data=data, room='room', skip_sid=sid)
     return "OK"
 
 @sio.event
