@@ -1,35 +1,30 @@
-import uvicorn
-from fastapi import FastAPI, Body
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import eventlet
+import socketio
 
-class EventInfo(BaseModel):
-    event: str
-    currentTime: float
+sio = socketio.Server(cors_allowed_origins='*')
+app = socketio.WSGIApp(sio)
 
-origins = ["*"]
+@sio.event
+def connect(sid, environ):
+    print('connect ', sid)
+    sio.enter_room(sid, 'room')
+    return "OK"
 
-app = FastAPI()
+@sio.event
+def message(sid, data):
+    print(sid, data)
+    return "OK"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@sio.event
+def send_video_event(sid, data):
+    print(sid, data)
+    sio.emit(event="receive_video_event", data=data, room='room', skip_sid=sid)
+    return "OK"
 
+@sio.event
+def disconnect(sid):
+    print('disconnect ', sid)
+    return "OK"
 
-@app.get("/")
-def read_root():
-    return { "message": "Hello World" }
-
-@app.post("/eventInfo/")
-def write_event_info(event_info: EventInfo):
-    print(event_info.event)
-    print(event_info.currentTime)
-    return event_info
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+if __name__ == '__main__':
+    eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)
