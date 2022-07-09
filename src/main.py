@@ -1,5 +1,7 @@
-import eventlet
+import eventlet 
 import socketio
+
+from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 
 sio = socketio.Server(cors_allowed_origins='*')
 app = socketio.WSGIApp(sio)
@@ -29,22 +31,30 @@ def join_room(sid, roomId):
     if(sio.manager.rooms.get("/").get(roomId) is None):
         return "ROOM_NOT_FOUND"    
     sio.enter_room(sid, roomId)
-    user_room_dict[sid] = roomId
+    user_room_dict[sid] = {
+        'room': roomId
+    }
+    user_room_dict[sid]['permissions'] = PERMISSIONS_USER.copy()
     return "OK"
 
 @sio.event
 def create_room(sid, roomId):
     print(sid, roomId)
-    if(sio.manager.rooms.get("/").get(roomId) is not None):
+    if(sio.manager.rooms.get("/").get(roomId) is not None): 
         return "ROOM_ALREADY_EXISTS"    
     sio.enter_room(sid, roomId)
+    user_room_dict[sid] = {
+        'room': roomId
+    }
+    user_room_dict[sid]['permissions'] = PERMISSIONS_ADMIN.copy()
+    sio.emit(event='permissions', data={'permissions': user_room_dict[sid]['permissions']})
     return "OK"
 
 @sio.event
 def find_room_by_client(sid):
     if sid not in user_room_dict:
         return "ROOM_NOT_FOUND"
-    return user_room_dict[sid]
+    return user_room_dict[sid]['room']
 
 @sio.event
 def disconnect(sid):
