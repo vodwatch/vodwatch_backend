@@ -28,7 +28,7 @@ def send_video_event(sid, data):
 @sio.event
 def join_room(sid, roomId):
     print(sid, roomId)
-    if not room_dict[roomId]:
+    if not roomId in room_dict:
         return "ROOM_NOT_FOUND"    
     sio.enter_room(sid, roomId)
     room_dict[roomId] = {
@@ -44,7 +44,7 @@ def join_room(sid, roomId):
 @sio.event
 def create_room(sid, roomId):
     print(sid, roomId)
-    if room_dict[roomId]: 
+    if roomId in room_dict: 
         return "ROOM_ALREADY_EXISTS"    
     sio.enter_room(sid, roomId)
     room_dict[roomId] = {
