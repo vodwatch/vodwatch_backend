@@ -22,7 +22,7 @@ def message(sid, data):
 @sio.event
 def send_video_event(sid, data):
     print(sid, data)
-    sio.emit(event="receive_video_event", data=data['eventInfo'], room=data['myRoomId'], skip_sid=sid)
+    sio.emit(event="receive_video_event", data=data['eventInfo'], room=data['roomId'], skip_sid=sid)
     return "OK"
 
 @sio.event
