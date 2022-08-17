@@ -1,7 +1,7 @@
 PERMISSIONS_ADMIN = {
         'pause': True,
         'play': True,
-        'seek': True,
+        'seeked': True,
         'chat': True,
         'kick': True
 }
@@ -9,7 +9,7 @@ PERMISSIONS_ADMIN = {
 PERMISSIONS_USER = {
         'pause': False,
         'play': False,
-        'seek': False,
+        'seeked': False,
         'chat': True,
         'kick': False
 }
