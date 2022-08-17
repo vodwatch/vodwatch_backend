@@ -38,7 +38,7 @@ def join_room(sid, roomId):
     sio.emit(event='permissions', data={
         'permissions': room_dict[roomId][sid]['permissions'],
         'roomId': roomId,
-        })
+        }, to=sid)
     return "OK"
 
 @sio.event
@@ -54,7 +54,7 @@ def create_room(sid, roomId):
     sio.emit(event='permissions', data={
         'permissions': room_dict[roomId][sid]['permissions'],
         'roomId': roomId,
-        })
+        }, to=sid)
     return "OK"
 
 @sio.event
