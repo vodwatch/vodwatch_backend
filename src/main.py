@@ -6,7 +6,7 @@ from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 sio = socketio.Server(cors_allowed_origins='*')
 app = socketio.WSGIApp(sio)
 
-user_room_dict = dict()
+room_dict = dict()
 
 @sio.event
 def connect(sid, environ):
@@ -22,39 +22,46 @@ def message(sid, data):
 @sio.event
 def send_video_event(sid, data):
     print(sid, data)
-    sio.emit(event="receive_video_event", data=data['eventInfo'], room=data['myRoomId'], skip_sid=sid)
+    sio.emit(event="receive_video_event", data=data['eventInfo'], room=data['roomId'], skip_sid=sid)
     return "OK"
 
 @sio.event
 def join_room(sid, roomId):
     print(sid, roomId)
-    if(sio.manager.rooms.get("/").get(roomId) is None):
+    if not roomId in room_dict:
         return "ROOM_NOT_FOUND"    
     sio.enter_room(sid, roomId)
-    user_room_dict[sid] = {
-        'room': roomId
+    room_dict[roomId] = {
+        sid: {}
     }
-    user_room_dict[sid]['permissions'] = PERMISSIONS_USER.copy()
+    room_dict[roomId][sid]['permissions'] = PERMISSIONS_USER.copy()
+    sio.emit(event='permissions', data={
+        'permissions': room_dict[roomId][sid]['permissions'],
+        'roomId': roomId,
+        }, to=sid)
     return "OK"
 
 @sio.event
 def create_room(sid, roomId):
     print(sid, roomId)
-    if(sio.manager.rooms.get("/").get(roomId) is not None): 
+    if roomId in room_dict: 
         return "ROOM_ALREADY_EXISTS"    
     sio.enter_room(sid, roomId)
-    user_room_dict[sid] = {
-        'room': roomId
+    room_dict[roomId] = {
+        sid: {}
     }
-    user_room_dict[sid]['permissions'] = PERMISSIONS_ADMIN.copy()
-    sio.emit(event='permissions', data={'permissions': user_room_dict[sid]['permissions']})
+    room_dict[roomId][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
+    sio.emit(event='permissions', data={
+        'permissions': room_dict[roomId][sid]['permissions'],
+        'roomId': roomId,
+        }, to=sid)
     return "OK"
 
 @sio.event
 def find_room_by_client(sid):
-    if sid not in user_room_dict:
+    if room_dict:
         return "ROOM_NOT_FOUND"
-    return user_room_dict[sid]['room']
+    return room_dict[sid]['room']
 
 @sio.event
 def disconnect(sid):
