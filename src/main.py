@@ -26,6 +26,12 @@ def send_video_event(sid, data):
     return "OK"
 
 @sio.event
+def send_message(sid, data):
+    print(sid, data)
+    sio.emit(event="receive_message", data=data['message'], room=data['roomId'], skip_sid=sid)
+    return "OK"
+
+@sio.event
 def join_room(sid, roomId):
     print(sid, roomId)
     if not roomId in room_dict:
