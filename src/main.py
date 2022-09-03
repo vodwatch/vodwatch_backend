@@ -15,8 +15,18 @@ def connect(sid, environ):
     return "OK"
 
 @sio.event
-def message(sid, data):
-    print(sid, data)
+def send_message(sid, data):
+    if data['roomId'] not in room_dict:
+        return "ROOM_NOT_FOUND"
+    sio.emit(
+        event = "receive_message", 
+        data = {
+            'from': sid, 
+            'content' : data['message']
+        }, 
+        room = data['roomId'], 
+        skip_sid = sid,
+    )
     return "OK"
 
 @sio.event
@@ -26,15 +36,9 @@ def send_video_event(sid, data):
     return "OK"
 
 @sio.event
-def send_message(sid, data):
-    print(sid, data)
-    sio.emit(event="receive_message", data=data['message'], room=data['roomId'], skip_sid=sid)
-    return "OK"
-
-@sio.event
 def join_room(sid, roomId):
     print(sid, roomId)
-    if not roomId in room_dict:
+    if roomId not in room_dict:
         return "ROOM_NOT_FOUND"    
     sio.enter_room(sid, roomId)
     room_dict[roomId] = {
@@ -68,6 +72,12 @@ def find_room_by_client(sid):
     if room_dict:
         return "ROOM_NOT_FOUND"
     return room_dict[sid]['room']
+
+# IN PROGRESS
+@sio.event
+def find_all_users_in_room(sid):
+    pass
+    
 
 @sio.event
 def disconnect(sid):
