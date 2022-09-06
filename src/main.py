@@ -1,9 +1,10 @@
 import eventlet 
+import os
 import socketio
 
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 
-sio = socketio.Server(cors_allowed_origins='*')
+sio = socketio.Server(cors_allowed_origins='https://www.netflix.com')
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
@@ -69,4 +70,5 @@ def disconnect(sid):
     return "OK"
 
 if __name__ == '__main__':
-    eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ.get('PORT', '5000')))), app)
+
