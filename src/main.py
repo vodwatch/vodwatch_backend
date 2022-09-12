@@ -1,9 +1,10 @@
 import eventlet 
+import os
 import socketio
 
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 
-sio = socketio.Server(cors_allowed_origins='*')
+sio = socketio.Server(cors_allowed_origins='https://www.netflix.com')
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
@@ -15,8 +16,18 @@ def connect(sid, environ):
     return "OK"
 
 @sio.event
-def message(sid, data):
-    print(sid, data)
+def send_message(sid, data):
+    if data['roomId'] not in room_dict:
+        return "ROOM_NOT_FOUND"
+    sio.emit(
+        event = "receive_message", 
+        data = {
+            'from': sid, 
+            'content' : data['message']
+        }, 
+        room = data['roomId'], 
+        skip_sid = sid,
+    )
     return "OK"
 
 @sio.event
@@ -28,7 +39,7 @@ def send_video_event(sid, data):
 @sio.event
 def join_room(sid, roomId):
     print(sid, roomId)
-    if not roomId in room_dict:
+    if roomId not in room_dict:
         return "ROOM_NOT_FOUND"    
     sio.enter_room(sid, roomId)
     room_dict[roomId] = {
@@ -63,10 +74,17 @@ def find_room_by_client(sid):
         return "ROOM_NOT_FOUND"
     return room_dict[sid]['room']
 
+# IN PROGRESS
+@sio.event
+def find_all_users_in_room(sid):
+    pass
+    
+
 @sio.event
 def disconnect(sid):
     print('disconnect ', sid)
     return "OK"
 
 if __name__ == '__main__':
-    eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ.get('PORT', '5000')))), app)
+
