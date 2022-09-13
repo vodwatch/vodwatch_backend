@@ -52,9 +52,17 @@ def join_room(sid, roomId):
     room_dict[roomId][sid] = {}
     room_dict[roomId][sid]['permissions'] = PERMISSIONS_USER.copy()
     sio.emit(event='permissions', data={
-        'permissions': room_dict[roomId][sid]['permissions'],
+        'my_id': sid,
+        'permissions': room_dict[roomId],
         'roomId': roomId,
     }, to=sid)
+    
+    sio.emit(event='permissions', data={
+        'my_id': "",
+        'permissions': room_dict[roomId],
+        'roomId': roomId,
+    }, skip_sid=sid)
+    
     return "OK"
 
 
@@ -69,9 +77,11 @@ def create_room(sid, roomId):
     }
     room_dict[roomId][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
     sio.emit(event='permissions', data={
-        'permissions': room_dict[roomId][sid]['permissions'],
+        'my_id': sid,
+        'permissions': room_dict[roomId],
         'roomId': roomId,
     }, to=sid)
+    
     return "OK"
 
 
@@ -88,14 +98,12 @@ def set_users_permissions(sid, roomId, usersPermissions):
         return "ROOM_NOT_FOUND"
     print(usersPermissions)
     room_dict[roomId] = usersPermissions
+    sio.emit(event='permissions', data={
+        'my_id': "",
+        'permissions': room_dict[roomId],
+        'roomId': roomId,
+    }, skip_sid=sid)
     return "OK"
-
-
-# IN PROGRESS
-@sio.event
-def find_all_users_in_room(sid):
-    pass
-
 
 @sio.event
 def disconnect(sid):
