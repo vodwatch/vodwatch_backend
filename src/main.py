@@ -6,7 +6,7 @@ import socketio
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 from helper import generate_random_uuid, get_room_id_by_sid
 
-sio = socketio.Server(cors_allowed_origins=['http://localhost:5000', 'https://www.netflix.com'])
+sio = socketio.Server(cors_allowed_origins=['https://www.netflix.com', 'https://play.hbomax.com'])
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
@@ -59,10 +59,11 @@ def send_video_event(sid, eventInfo):
 
 
 @sio.event
-def join_room(sid, room_id):
-    print(sid, room_id)
-    if room_id not in room_dict:
-        return "ROOM_NOT_FOUND"
+def join_room(sid, roomId, streamingPlatform, videoTitle):
+    print(sid, roomId)
+
+    if roomId not in room_dict or room_dict[roomId]['videoInfo'] != { 'videoTitle': videoTitle }:
+        return "ROOM_NOT_FOUND" 
 
     sio.enter_room(sid, room_id)
 
@@ -77,7 +78,7 @@ def join_room(sid, room_id):
 
 
 @sio.event
-def create_room(sid):
+def create_room(sid, streamingPlatform, videoTitle):
     room_id = generate_random_uuid()
     if room_id in room_dict:
         return "ROOM_ALREADY_EXISTS"
@@ -89,6 +90,7 @@ def create_room(sid):
         sid: {}
     }
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
+    room_dict[room_id]['videoInfo'] = { 'videoTitle': videoTitle }
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
     try_to_remove_inactive_rooms()
