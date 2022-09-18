@@ -9,7 +9,6 @@ app = socketio.WSGIApp(sio)
 
 room_dict = dict()
 
-
 @sio.event
 def connect(sid, environ):
     print('connect ', sid)
@@ -49,20 +48,10 @@ def join_room(sid, roomId):
         return "ROOM_NOT_FOUND"
 
     sio.enter_room(sid, roomId)
+    
     room_dict[roomId][sid] = {}
     room_dict[roomId][sid]['permissions'] = PERMISSIONS_USER.copy()
-    sio.emit(event='permissions', data={
-        'my_id': sid,
-        'permissions': room_dict[roomId],
-        'roomId': roomId,
-    }, to=sid)
-    
-    sio.emit(event='permissions', data={
-        'my_id': "",
-        'permissions': room_dict[roomId],
-        'roomId': roomId,
-    }, skip_sid=sid)
-    
+    sio.emit(event='permissions', data=room_dict[roomId])
     return "OK"
 
 
@@ -71,17 +60,14 @@ def create_room(sid, roomId):
     print(sid, roomId)
     if roomId in room_dict:
         return "ROOM_ALREADY_EXISTS"
+    
     sio.enter_room(sid, roomId)
+    
     room_dict[roomId] = {
         sid: {}
     }
     room_dict[roomId][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
-    sio.emit(event='permissions', data={
-        'my_id': sid,
-        'permissions': room_dict[roomId],
-        'roomId': roomId,
-    }, to=sid)
-    
+    sio.emit(event='permissions', data=room_dict[roomId])
     return "OK"
 
 
@@ -93,16 +79,14 @@ def find_all_users_in_room(sid, roomId):
 
 
 @sio.event
-def set_users_permissions(sid, roomId, usersPermissions):
+def set_users_permissions(sid, data):
+    print(data)
+    roomId = data["roomId"]
+    userPermissions = data["userPermissions"]
     if room_dict[roomId] is None:
         return "ROOM_NOT_FOUND"
-    print(usersPermissions)
-    room_dict[roomId] = usersPermissions
-    sio.emit(event='permissions', data={
-        'my_id': "",
-        'permissions': room_dict[roomId],
-        'roomId': roomId,
-    }, skip_sid=sid)
+    room_dict[roomId] = userPermissions
+    sio.emit(event='permissions', data=room_dict[roomId])
     return "OK"
 
 @sio.event
