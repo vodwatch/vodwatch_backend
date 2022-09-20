@@ -83,7 +83,7 @@ def set_users_permissions(sid, user_permissions):
         return "ROOM_NOT_FOUND"
     
     room_dict[my_room_id] = user_permissions
-    sio.emit(event='permissions', data=room_dict[my_room_id])
+    sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
     return "OK"
 
 @sio.event
@@ -95,7 +95,7 @@ def disconnect(sid):
     else:
         # remove user from a dict and update permissions
         room_dict[my_room_id][sid] = {}
-        sio.emit(event='permissions', data=room_dict[my_room_id]) #TODO: send only to specific room
+        sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
         return "OK"
 
 if __name__ == '__main__':
