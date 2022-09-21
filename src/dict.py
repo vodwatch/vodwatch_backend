@@ -5,7 +5,7 @@ PERMISSIONS_ADMIN = {
 }
 
 PERMISSIONS_USER = {
-        'vodControl': True,
+        'vodControl': False,
         'chat': True,
         'kick': False
 }
