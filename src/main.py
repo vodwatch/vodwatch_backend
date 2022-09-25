@@ -55,18 +55,21 @@ def join_room(sid, room_id):
     
     room_dict[room_id][sid] = {}
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_USER.copy()
+    
+    print(room_dict[room_id])
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     return "OK"
 
 
 @sio.event
 def create_room(sid):
-    room_id = generate_random_uuid();
+    room_id = generate_random_uuid()
     if room_id in room_dict:
         return "ROOM_ALREADY_EXISTS"
     
     sio.enter_room(sid, room_id)
     
+    room_dict[room_id] = {}
     room_dict[room_id] = {
         sid: {}
     }
@@ -85,6 +88,24 @@ def set_users_permissions(sid, user_permissions):
     room_dict[my_room_id] = user_permissions
     sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
     return "OK"
+
+
+@sio.event
+def kick_user(my_sid, kicked_user_sid):
+    # prevent kicking yourself
+    if my_sid == kicked_user_sid:
+        return "OPERATION_NOT_ALLOWED"
+    
+    # find room id of user to be kicked
+    room_id = get_room_id_by_sid(kicked_user_sid, room_dict)
+    if room_id == "ROOM_NOT_FOUND":
+        return "ROOM_NOT_FOUND"
+    
+    del room_dict[room_id][kicked_user_sid]
+    sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
+    # sio.off('event-name', listener);
+    return "OK"
+    
 
 @sio.event
 def disconnect(sid):
