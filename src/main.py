@@ -80,10 +80,18 @@ def create_room(sid):
 
 @sio.event
 def set_users_permissions(sid, user_permissions):
-    print(user_permissions)
     my_room_id = get_room_id_by_sid(sid, room_dict)
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
+    
+    # prevent changing your own permissions
+    sid_server_permissions = room_dict[my_room_id][sid]['permissions']
+    sid_received_permissions = user_permissions[sid]['permissions']
+    if sid_server_permissions != sid_received_permissions:
+        sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
+        return "OPERATION_NOT_ALLOWED"
+    
+    # TODO: prevent changing admin's permissions
     
     room_dict[my_room_id] = user_permissions
     sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
