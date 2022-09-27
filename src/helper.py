@@ -8,5 +8,5 @@ def get_room_id_by_sid(sid, room_dict):
     return "ROOM_NOT_FOUND"
 
 def generate_random_uuid():
-    return str(uuid.uuid4())
+    return str(uuid.uuid4())[0:5].upper()
     
