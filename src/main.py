@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import eventlet
 import os
 import socketio
@@ -9,6 +10,10 @@ sio = socketio.Server(cors_allowed_origins='https://www.netflix.com')
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
+
+# key: room id
+# value: datetime from last event that occurred in the room
+room_last_event_datetime_dict = dict() 
 
 @sio.event
 def connect(sid, environ):
@@ -36,7 +41,7 @@ def send_message(sid, message):
         room=my_room_id,
         skip_sid=sid,
     )
-
+    room_last_event_datetime_dict[my_room_id] = datetime.now()
     return "OK"
 
 
@@ -47,6 +52,7 @@ def send_video_event(sid, eventInfo):
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
     sio.emit(event="receive_video_event", data=eventInfo, room=my_room_id, skip_sid=sid)
+    room_last_event_datetime_dict[my_room_id] = datetime.now()
     return "OK"
 
 
@@ -63,6 +69,7 @@ def join_room(sid, room_id):
     
     print(room_dict[room_id])
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
+    room_last_event_datetime_dict[room_id] = datetime.now()
     return "OK"
 
 
@@ -80,6 +87,7 @@ def create_room(sid):
     }
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
+    room_last_event_datetime_dict[room_id] = datetime.now()
     return room_id
 
 
@@ -104,6 +112,7 @@ def set_users_permissions(sid, user_permissions):
 
     room_dict[my_room_id] = user_permissions
     sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
+    room_last_event_datetime_dict[my_room_id] = datetime.now()
     return "OK"
 
 
@@ -134,6 +143,7 @@ def kick_user(my_sid, kicked_user_sid):
     del room_dict[room_id][kicked_user_sid]
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     sio.disconnect(kicked_user_sid)
+    room_last_event_datetime_dict[room_id] = datetime.now()
     return "OK"
     
 
@@ -147,7 +157,24 @@ def disconnect(sid):
         # remove user from a dict and update permissions
         del room_dict[my_room_id][sid]
         sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
+        room_last_event_datetime_dict[my_room_id] = datetime.now()
         return "OK"
+
+# this event should only be triggered
+# by external scheduler that will be responsible
+# for deleting inactive rooms periodically
+@sio.event
+def remove_inactive_rooms(sid):
+    max_room_inactivity_time_minutes = 1
+    for room_id in room_last_event_datetime_dict:
+        last_event_datetime = room_last_event_datetime_dict[room_id]
+        is_room_inactive = datetime.now() - last_event_datetime > timedelta(minutes=max_room_inactivity_time_minutes)
+        if is_room_inactive:
+            # kick all users in the room and delete room
+            for user_id in room_dict[room_id]:
+                kick_user(sid=sid, kicked_user_sid=user_id)
+            del room_dict[room_id]
+
 
 if __name__ == '__main__':
     eventlet.wsgi.server(eventlet.listen(('', int(os.environ.get('PORT', '5000')))), app)
