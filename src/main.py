@@ -22,6 +22,11 @@ def send_message(sid, message):
     my_room_id = get_room_id_by_sid(sid, room_dict)
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
+
+    # check if user has chat permissions
+    if room_dict[my_room_id][sid]['permissions']['chat'] == False:
+        return "OPERATION_NOT_ALLOWED"
+
     sio.emit(
         event="receive_message",
         data={
@@ -92,6 +97,7 @@ def set_users_permissions(sid, user_permissions):
         return "OPERATION_NOT_ALLOWED"
     
     # TODO: prevent changing admin's permissions
+
     
     room_dict[my_room_id] = user_permissions
     sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
@@ -104,12 +110,17 @@ def kick_user(my_sid, kicked_user_sid):
     if my_sid == kicked_user_sid:
         sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
         return "OPERATION_NOT_ALLOWED"
-    
+
     # find room id of user to be kicked
     room_id = get_room_id_by_sid(kicked_user_sid, room_dict)
     if room_id == "ROOM_NOT_FOUND":
         sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
         return "ROOM_NOT_FOUND"
+
+    # check if user has kick permissions
+    if room_dict[room_id][my_sid]['permissions']['kick'] == False:
+        sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
+        return "OPERATION_NOT_ALLOWED"
     
     del room_dict[room_id][kicked_user_sid]
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
