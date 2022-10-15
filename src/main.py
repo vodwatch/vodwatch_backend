@@ -89,16 +89,19 @@ def set_users_permissions(sid, user_permissions):
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
     
-    # prevent user from changing his own permissions
     sid_server_permissions = room_dict[my_room_id][sid]['permissions']
     sid_received_permissions = user_permissions[sid]['permissions']
-    if sid_server_permissions != sid_received_permissions:
+    
+    # check if user is admin
+    if sid_server_permissions != PERMISSIONS_ADMIN:
         sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
         return "OPERATION_NOT_ALLOWED"
     
-    # TODO: prevent changing admin's permissions
+    # prevent user from changing his own permissions
+    if sid_server_permissions != sid_received_permissions:
+        sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
+        return "OPERATION_NOT_ALLOWED"
 
-    
     room_dict[my_room_id] = user_permissions
     sio.emit(event='permissions', data=room_dict[my_room_id], room=my_room_id)
     return "OK"
@@ -121,6 +124,12 @@ def kick_user(my_sid, kicked_user_sid):
     if room_dict[room_id][my_sid]['permissions']['kick'] == False:
         sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
         return "OPERATION_NOT_ALLOWED"
+    
+    # prevent user from kicking room admin
+    if room_dict[room_id][kicked_user_sid]['permissions'] == PERMISSIONS_ADMIN:
+        sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
+        return "OPERATION_NOT_ALLOWED"
+    
     
     del room_dict[room_id][kicked_user_sid]
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
