@@ -16,7 +16,7 @@ class RoomCleanerScheduler(threading.Thread):
         print("Starting thread: " + str(self.thread_id))
         print("Connecting with server ...")
         self.sio.connect(url="http://localhost:5000", wait_timeout=10)
-        schedule.every(30).minutes.do(self.__job)
+        schedule.every(1).minutes.do(self.__job)
         while True:
             schedule.run_pending()
             time.sleep(1)

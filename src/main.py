@@ -7,7 +7,7 @@ from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 from helper import generate_random_uuid, get_room_id_by_sid
 from scheduler import RoomCleanerScheduler
 
-sio = socketio.Server(cors_allowed_origins='https://www.netflix.com')
+sio = socketio.Server(cors_allowed_origins=['http://localhost:5000', 'https://www.netflix.com'])
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
@@ -145,7 +145,6 @@ def kick_user(my_sid, kicked_user_sid, is_scheduler=False):
             sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
             return "OPERATION_NOT_ALLOWED"
 
-
     del room_dict[room_id][kicked_user_sid]
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     sio.disconnect(kicked_user_sid)
@@ -172,7 +171,7 @@ def disconnect(sid):
 # for deleting inactive rooms periodically
 @sio.event
 def remove_inactive_rooms(sid):
-    max_room_inactivity_time_minutes = 15
+    max_room_inactivity_time_minutes = 1
     for room_id in list(room_last_event_datetime_dict.keys()):
         last_event_datetime = room_last_event_datetime_dict[room_id]
         is_room_inactive = datetime.now() - last_event_datetime > timedelta(minutes=max_room_inactivity_time_minutes)
