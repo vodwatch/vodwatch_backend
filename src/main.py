@@ -5,24 +5,22 @@ import socketio
 
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 from helper import generate_random_uuid, get_room_id_by_sid
-from scheduler import RoomCleanerScheduler
 
 sio = socketio.Server(cors_allowed_origins=['http://localhost:5000', 'https://www.netflix.com'])
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
 
-room_cleaner_scheduler = RoomCleanerScheduler(1)
 # key: room id
 # value: datetime from last event that occurred in the room
-
 room_last_event_datetime_dict = dict()
+
+# timestamp for last room clean attempt
+last_cleaning_attempt_timestamp = datetime.now()
 
 
 @sio.event
 def connect(sid, environ):
-    if not room_cleaner_scheduler.is_alive():
-        room_cleaner_scheduler.start()
     return "OK"
 
 
@@ -74,6 +72,7 @@ def join_room(sid, room_id):
     print(room_dict[room_id])
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
+    try_to_remove_inactive_rooms()
     return "OK"
 
 
@@ -92,6 +91,7 @@ def create_room(sid):
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
+    try_to_remove_inactive_rooms()
     return room_id
 
 
@@ -122,14 +122,14 @@ def set_users_permissions(sid, user_permissions):
 
 
 @sio.event
-def kick_user(my_sid, kicked_user_sid, is_scheduler=False):
+def kick_user(my_sid, kicked_user_sid, is_room_cleaner=False):
     # find room id of user to be kicked
     room_id = get_room_id_by_sid(kicked_user_sid, room_dict)
     if room_id == "ROOM_NOT_FOUND":
         sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
         return "ROOM_NOT_FOUND"
 
-    if not is_scheduler:
+    if not is_room_cleaner:
         # prevent user from kicking himself
         if my_sid == kicked_user_sid:
             sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
@@ -166,20 +166,27 @@ def disconnect(sid):
         return "OK"
 
 
-# this event should only be triggered
-# by external scheduler that will be responsible
-# for deleting inactive rooms periodically
-@sio.event
-def remove_inactive_rooms(sid):
-    max_room_inactivity_time_minutes = 1
+def try_to_remove_inactive_rooms():
+    print("attempting to clear rooms")
+    global last_cleaning_attempt_timestamp
+    max_time_from_last_attempt_minutes = 30
+    should_be_cleaned = datetime.now() - last_cleaning_attempt_timestamp > timedelta(
+        minutes=max_time_from_last_attempt_minutes)
+    if should_be_cleaned:
+        remove_inactive_rooms()
+        last_cleaning_attempt_timestamp = datetime.now()
+
+
+def remove_inactive_rooms():
+    max_room_inactivity_time_hours = 3
     for room_id in list(room_last_event_datetime_dict.keys()):
         last_event_datetime = room_last_event_datetime_dict[room_id]
-        is_room_inactive = datetime.now() - last_event_datetime > timedelta(minutes=max_room_inactivity_time_minutes)
+        is_room_inactive = datetime.now() - last_event_datetime > timedelta(hours=max_room_inactivity_time_hours)
         if is_room_inactive:
             # kick all users in the room and delete room
             print("Deleting room: " + room_id + " due to inactivity!")
             for user_id in list(room_dict[room_id].keys()):
-                kick_user(my_sid=sid, kicked_user_sid=user_id, is_scheduler=True)
+                kick_user(my_sid=None, kicked_user_sid=user_id, is_room_cleaner=True)
             del room_dict[room_id]
             del room_last_event_datetime_dict[room_id]
 
