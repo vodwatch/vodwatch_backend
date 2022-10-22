@@ -48,8 +48,8 @@ def send_message(sid, message):
 
 
 @sio.event
-def send_video_event(sid, eventInfo):
-    print(sid, eventInfo)
+def send_video_event(sid, event_info):
+    print(sid, event_info)
     my_room_id = get_room_id_by_sid(sid, room_dict)
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
@@ -59,10 +59,10 @@ def send_video_event(sid, eventInfo):
 
 
 @sio.event
-def join_room(sid, roomId, streamingPlatform, videoTitle):
-    print(sid, roomId)
+def join_room(sid, room_id, streaming_platform, video_title):
+    print(sid, room_id)
 
-    if roomId not in room_dict or room_dict[roomId]['videoInfo'] != { 'videoTitle': videoTitle }:
+    if room_id not in room_dict or room_dict[room_id]['videoInfo'] != { 'videoTitle': video_title }:
         return "ROOM_NOT_FOUND" 
 
     sio.enter_room(sid, room_id)
@@ -78,7 +78,7 @@ def join_room(sid, roomId, streamingPlatform, videoTitle):
 
 
 @sio.event
-def create_room(sid, streamingPlatform, videoTitle):
+def create_room(sid, streaming_platform, video_title):
     room_id = generate_random_uuid()
     if room_id in room_dict:
         return "ROOM_ALREADY_EXISTS"
@@ -90,7 +90,7 @@ def create_room(sid, streamingPlatform, videoTitle):
         sid: {}
     }
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
-    room_dict[room_id]['videoInfo'] = { 'videoTitle': videoTitle }
+    room_dict[room_id]['videoInfo'] = { 'videoTitle': video_title }
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
     try_to_remove_inactive_rooms()
