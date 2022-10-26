@@ -1,15 +1,11 @@
 PERMISSIONS_ADMIN = {
-        'pause': True,
-        'play': True,
-        'seeked': True,
+        'vodControl': True,
         'chat': True,
         'kick': True
 }
 
 PERMISSIONS_USER = {
-        'pause': False,
-        'play': False,
-        'seeked': False,
+        'vodControl': False,
         'chat': True,
         'kick': False
 }
