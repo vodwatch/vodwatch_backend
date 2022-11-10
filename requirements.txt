@@ -2,3 +2,6 @@ python-socketio
 eventlet
 pytest
 uuid
+schedule
+requests
+websocket-client
