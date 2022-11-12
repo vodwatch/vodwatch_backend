@@ -6,7 +6,7 @@ import socketio
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 from helper import generate_random_uuid, get_room_id_by_sid
 
-sio = socketio.Server(cors_allowed_origins=['https://www.netflix.com', 'https://play.hbomax.com', 'https://www.youtube.com/'])
+sio = socketio.Server(cors_allowed_origins=['https://www.netflix.com', 'https://play.hbomax.com', 'https://www.youtube.com'])
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
