@@ -6,7 +6,7 @@ import socketio
 from dict import PERMISSIONS_ADMIN, PERMISSIONS_USER
 from helper import generate_random_uuid, get_room_id_by_sid
 
-sio = socketio.Server(cors_allowed_origins=['https://www.netflix.com', 'https://play.hbomax.com', 'https://www.youtube.com'])
+sio = socketio.Server(cors_allowed_origins=['http://localhost:5000', 'https://www.netflix.com', 'https://play.hbomax.com', 'https://www.youtube.com'])
 app = socketio.WSGIApp(sio)
 
 room_dict = dict()
@@ -53,17 +53,20 @@ def send_video_event(sid, event_info):
     my_room_id = get_room_id_by_sid(sid, room_dict)
     if my_room_id == "ROOM_NOT_FOUND":
         return "ROOM_NOT_FOUND"
-    sio.emit(event="receive_video_event", data=eventInfo, room=my_room_id, skip_sid=sid)
+    sio.emit(event="receive_video_event", data=event_info, room=my_room_id, skip_sid=sid)
     room_last_event_datetime_dict[my_room_id] = datetime.now()
     return "OK"
 
 
 @sio.event
-def join_room(sid, room_id, streaming_platform, video_title):
-    print(sid, room_id)
+def join_room(sid, room_id, streaming_platform, video_id, video_title):
+    print(sid, room_id, streaming_platform, video_id, video_title)
 
-    if room_id not in room_dict or room_dict[room_id]['videoInfo'] != { 'videoTitle': video_title }:
+    if room_id not in room_dict:
         return "ROOM_NOT_FOUND" 
+
+    if not check_if_the_same_video_played_in_room(room_id, streaming_platform, video_id, video_title):
+        return "VIDEO_NOT_MATCHING"
 
     sio.enter_room(sid, room_id)
 
@@ -78,7 +81,8 @@ def join_room(sid, room_id, streaming_platform, video_title):
 
 
 @sio.event
-def create_room(sid, streaming_platform, video_title):
+def create_room(sid, streaming_platform, video_id, video_title):
+    print(sid, streaming_platform, video_id, video_title)
     room_id = generate_random_uuid()
     if room_id in room_dict:
         return "ROOM_ALREADY_EXISTS"
@@ -90,7 +94,7 @@ def create_room(sid, streaming_platform, video_title):
         sid: {}
     }
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
-    room_dict[room_id]['videoInfo'] = { 'videoTitle': video_title }
+    room_dict[room_id]['videoInfo'] = { 'streamingPlatform': streaming_platform, 'videoId': video_id, 'videoTitle': video_title }
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
     try_to_remove_inactive_rooms()
@@ -191,6 +195,20 @@ def remove_inactive_rooms():
                 kick_user(my_sid=None, kicked_user_sid=user_id, is_room_cleaner=True)
             del room_dict[room_id]
             del room_last_event_datetime_dict[room_id]
+
+
+def check_if_the_same_video_played_in_room(room_id, streaming_platform, video_id, video_title):
+    if room_id in room_dict:
+        if room_dict[room_id]['videoInfo']['streamingPlatform'] == streaming_platform and \
+                room_dict[room_id]['videoInfo']['videoId'] == video_id:
+            return True
+        elif room_dict[room_id]['videoInfo']['streamingPlatform'] in ['Netflix', "HBO Max"] and \
+                streaming_platform in ['Netflix', "HBO Max"] and \
+                room_dict[room_id]['videoInfo']['videoTitle'] == video_title:
+            return True
+        elif streaming_platform == "YouTube":
+            return True
+    return False
 
 
 if __name__ == '__main__':
