@@ -15,6 +15,10 @@ room_dict = dict()
 # value: datetime from last event that occurred in the room
 room_last_event_datetime_dict = dict()
 
+# key: room id
+# value: streaming platform, video id, video title
+video_info_dict = dict()
+
 # timestamp for last room clean attempt
 last_cleaning_attempt_timestamp = datetime.now()
 
@@ -66,6 +70,7 @@ def join_room(sid, room_id, streaming_platform, video_id, video_title):
         return "ROOM_NOT_FOUND" 
 
     if not check_if_the_same_video_played_in_room(room_id, streaming_platform, video_id, video_title):
+        print("Video changed!")
         return "VIDEO_NOT_MATCHING"
 
     sio.enter_room(sid, room_id)
@@ -94,9 +99,9 @@ def create_room(sid, streaming_platform, video_id, video_title):
         sid: {}
     }
     room_dict[room_id][sid]['permissions'] = PERMISSIONS_ADMIN.copy()
-    room_dict[room_id]['videoInfo'] = { 'streamingPlatform': streaming_platform, 'videoId': video_id, 'videoTitle': video_title }
     sio.emit(event='permissions', data=room_dict[room_id], room=room_id)
     room_last_event_datetime_dict[room_id] = datetime.now()
+    video_info_dict[room_id] = { 'streamingPlatform': streaming_platform, 'videoId': video_id, 'videoTitle': video_title }
     try_to_remove_inactive_rooms()
     return room_id
 
@@ -199,12 +204,12 @@ def remove_inactive_rooms():
 
 def check_if_the_same_video_played_in_room(room_id, streaming_platform, video_id, video_title):
     if room_id in room_dict:
-        if room_dict[room_id]['videoInfo']['streamingPlatform'] == streaming_platform and \
-                room_dict[room_id]['videoInfo']['videoId'] == video_id:
+        if video_info_dict[room_id]['streamingPlatform'] == streaming_platform and \
+                video_info_dict[room_id]['videoId'] == video_id:
             return True
-        elif room_dict[room_id]['videoInfo']['streamingPlatform'] in ['Netflix', "HBO Max"] and \
+        elif video_info_dict[room_id]['streamingPlatform'] in ['Netflix', "HBO Max"] and \
                 streaming_platform in ['Netflix', "HBO Max"] and \
-                room_dict[room_id]['videoInfo']['videoTitle'] == video_title:
+                video_info_dict[room_id]['videoTitle'] == video_title:
             return True
         elif streaming_platform == "YouTube":
             return True
